@@ -9,7 +9,6 @@ import {
 const apiKey = "AIzaSyC-rkWWFGl2LioSZ1YGoCtzpIHPO3AroUY"; 
 
 const TEXT_MODEL = "gemini-2.5-flash-preview-09-2025";
-// Käytetään Gemini 2.5 Flashia, joka on monipuolisempi ja usein ilmainen kokeilukäyttöön
 const IMAGE_MODEL = "gemini-2.5-flash-preview-09-2025";
 
 const categories = {
@@ -118,7 +117,6 @@ const App = () => {
     toy: categories.toys[0].label,
     special: categories.special[0].label,
     safety: categories.safety[0].label,
-    location: ''
   });
   const [story, setStory] = useState('');
   const [image, setImage] = useState(null);
@@ -137,7 +135,7 @@ const App = () => {
 
   const generateStory = async () => {
     if (!apiKey) {
-      setError("API-avain puuttuu koodista!");
+      setError("API-avain puuttuu!");
       return;
     }
     
@@ -148,8 +146,8 @@ const App = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: `Kirjoita lyhyt, aistillinen ja tyylikäs tarina (suomeksi) treffeistä henkilön ${vibeData.partnerName} kanssa. Käytä parametreja: ${JSON.stringify(vibeData)}.` }] }],
-          systemInstruction: { parts: [{ text: "Olet aistillisen fiktion kirjoittaja. Tyylisi on hienostunut ja tunnelmallinen." }] }
+          contents: [{ parts: [{ text: `Kirjoita tunnelmallinen, tyylikäs ja aistillinen tarina (suomeksi) treffeistä henkilön ${vibeData.partnerName} kanssa. Käytä parametreja: ${JSON.stringify(vibeData)}. Pituus noin 200-300 sanaa.` }] }],
+          systemInstruction: { parts: [{ text: "Olet aistillisen fiktion ammattilainen. Kieli on hienostunutta, herkkää ja mukaansatempaavaa." }] }
         })
       });
 
@@ -159,7 +157,7 @@ const App = () => {
       setStory(data.candidates?.[0]?.content?.parts?.[0]?.text || "Tarinan luominen epäonnistui.");
       setStep('result');
     } catch (err) {
-      setError("Tarinavirhe: " + err.message);
+      setError("Virhe tarinan luonnissa: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -169,40 +167,34 @@ const App = () => {
     setImageLoading(true);
     setError(null);
     try {
-      const promptText = `Generate a high-end, aesthetic, artistic image representing: ${vibeData.mood} mood, ${vibeData.outfit}, luxury lighting, cinematic background. NO TEXT. HIGH RESOLUTION.`;
+      const promptText = `An aesthetic, high-end cinematic photography shot of a luxurious setting, ${vibeData.mood} mood, atmospheric lighting, ${vibeData.outfit}, hyper-realistic, 8k, bokeh. NO TEXT.`;
       
-      // Kokeillaan Gemini 2.5 Flashia kuvamodulla
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: promptText }] }],
-          generationConfig: { 
-            responseModalities: ["IMAGE"] 
-          }
+          generationConfig: { responseModalities: ["IMAGE"] }
         })
       });
 
       const result = await response.json();
       
-      if (result.error) {
-        throw new Error(result.error.message);
-      }
+      if (result.error) throw new Error(result.error.message);
 
       const imageData = result.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
 
       if (imageData) {
         setImage(`data:image/png;base64,${imageData}`);
       } else {
-        // Jos API-avain ei salli kuvia, näytetään tyylikäs placeholder
-        setImage(`https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=1000`);
-        setError("Kuvagenerointi ei ole tuettu tällä API-avaimella (vaatii maksullisen tilan). Näytetään tunnelmakuva.");
+        // Fallback-kuva jos generointi ei onnistu
+        setImage(`https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=1200`);
+        setError("Kuvagenerointi vaatii laskutustilin. Näytetään tunnelmakuva.");
       }
     } catch (err) {
       console.error(err);
-      // Fallback kuvaan jos API epäonnistuu
-      setImage(`https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=1000`);
-      setError("Kuvapalvelu on rajoitettu laskutetuille tileille. Käytetään valmista tunnelmakuvaa.");
+      setImage(`https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=1200`);
+      setError("Kuvapalvelu on rajoitettu. Näytetään tunnelmakuva.");
     } finally {
       setImageLoading(false);
     }
@@ -229,7 +221,7 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-[#020205] text-slate-100 p-4 md:p-8 flex flex-col items-center">
-      <div className="w-full max-w-4xl mx-auto">
+      <div className="w-full max-w-5xl mx-auto">
         <header className="text-center mb-8">
           <div className="inline-flex items-center justify-center p-3 bg-white/5 rounded-2xl mb-4 border border-white/10">
             <Sparkles className="text-pink-500" size={24} />
@@ -238,71 +230,91 @@ const App = () => {
         </header>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl text-red-400 text-xs text-center">
-            {error}
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl text-red-400 text-xs text-center flex items-center justify-center gap-2">
+            <AlertCircle size={14} /> {error}
           </div>
         )}
 
         {step === 'input' ? (
           <div className="bg-slate-900/20 border border-white/5 rounded-[2.5rem] p-6 md:p-10 backdrop-blur-xl shadow-2xl">
-            <div className="mb-8">
+            <div className="mb-10">
               <label className="text-[10px] font-black text-pink-500 uppercase tracking-[0.3em] mb-2 block">Kumppanin nimi</label>
               <input 
-                className="w-full bg-white/5 border-b border-white/10 p-4 text-xl font-bold focus:border-pink-500 outline-none text-white transition-all"
+                className="w-full bg-white/5 border-b border-white/10 p-4 text-2xl font-bold focus:border-pink-500 outline-none text-white transition-all"
                 placeholder="Nimi..."
                 value={vibeData.partnerName}
                 onChange={(e) => setVibeData({...vibeData, partnerName: e.target.value})}
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <SelectBox label="Tunnelma" icon={Heart} value={vibeData.mood} options={categories.moods} field="mood" />
               <SelectBox label="Fokus" icon={Target} value={vibeData.focus} options={categories.focus} field="focus" />
               <SelectBox label="Intensiteetti" icon={Zap} value={vibeData.intensity} options={categories.intensity} field="intensity" />
+              <SelectBox label="Kommunikaatio" icon={MessageSquare} value={vibeData.comm} options={categories.communication} field="comm" />
               <SelectBox label="Asu" icon={Scissors} value={vibeData.outfit} options={categories.outfits} field="outfit" />
-              <SelectBox label="Sukat" icon={Layers} value={vibeData.nylon} options={categories.nylon} field="nylon" />
-              <SelectBox label="Aistit" icon={Eye} value={vibeData.sensory} options={categories.sensory} field="sensory" />
+              <SelectBox label="Sukat/Nylon" icon={Layers} value={vibeData.nylon} options={categories.nylon} field="nylon" />
+              <SelectBox label="Aistielementit" icon={Eye} value={vibeData.sensory} options={categories.sensory} field="sensory" />
+              <SelectBox label="BDSM/Leikki" icon={Anchor} value={vibeData.bdsm} options={categories.bdsm} field="bdsm" />
+              <SelectBox label="Lelut" icon={Box} value={vibeData.toy} options={categories.toys} field="toy" />
+              <SelectBox label="Erikoistoive" icon={Sparkles} value={vibeData.special} options={categories.special} field="special" />
+              <SelectBox label="Turvallisuus" icon={Shield} value={vibeData.safety} options={categories.safety} field="safety" />
             </div>
 
             <button 
               onClick={generateStory}
               disabled={!vibeData.partnerName || loading}
-              className="w-full mt-10 bg-gradient-to-r from-pink-600 to-purple-700 py-5 rounded-xl font-bold tracking-widest hover:opacity-90 disabled:opacity-30 transition-all flex items-center justify-center gap-3"
+              className="w-full mt-10 bg-gradient-to-r from-pink-600 to-purple-700 py-6 rounded-2xl font-bold tracking-widest hover:opacity-90 disabled:opacity-30 transition-all flex items-center justify-center gap-3 shadow-xl shadow-pink-900/20"
             >
-              {loading ? <Loader2 className="animate-spin" /> : "LUO TARINA"}
+              {loading ? <Loader2 className="animate-spin" /> : <BookOpen size={20} />}
+              LUO TARINA
             </button>
           </div>
         ) : (
-          <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-700">
-            <div className="bg-slate-900/30 border border-white/10 rounded-[2.5rem] p-8 md:p-12 backdrop-blur-2xl">
+          <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
+            <div className="bg-slate-900/30 border border-white/10 rounded-[3rem] p-8 md:p-14 backdrop-blur-2xl shadow-3xl">
+              <div className="flex flex-wrap gap-2 mb-10 opacity-50">
+                 {Object.values(vibeData).filter(v => v && v !== 'none' && v !== vibeData.partnerName).map((val, idx) => (
+                   <span key={idx} className="text-[10px] uppercase tracking-tighter border border-white/10 px-2 py-1 rounded">{val}</span>
+                 ))}
+              </div>
               <div className="prose prose-invert max-w-none">
                 {story.split('\n').filter(p => p.trim()).map((para, i) => (
-                  <p key={i} className="text-xl md:text-2xl leading-relaxed text-slate-200 font-serif italic mb-6">
+                  <p key={i} className="text-xl md:text-2xl leading-relaxed text-slate-200 font-serif italic mb-8 last:mb-0">
                     {para}
                   </p>
                 ))}
               </div>
             </div>
 
-            <div className="flex flex-col items-center gap-4">
+            <div className="flex flex-col items-center gap-6">
               {!image ? (
                 <button 
                   onClick={generateImage}
                   disabled={imageLoading}
-                  className="w-full max-w-sm bg-white/5 border border-white/10 p-6 rounded-2xl flex items-center justify-center gap-3 hover:bg-white/10 transition-all"
+                  className="w-full max-w-md bg-white/5 border border-white/10 p-8 rounded-3xl flex items-center justify-center gap-4 hover:bg-white/10 transition-all group"
                 >
-                  {imageLoading ? <Loader2 className="animate-spin text-pink-500" /> : <ImageIcon className="text-pink-500" />}
-                  <span className="font-bold uppercase tracking-widest text-sm">Visualisoi</span>
+                  {imageLoading ? (
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="animate-spin text-pink-500" />
+                      <span className="font-bold uppercase tracking-widest text-sm animate-pulse">Luodaan visuaalia...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <ImageIcon className="text-pink-500 group-hover:scale-110 transition-transform" />
+                      <span className="font-bold uppercase tracking-widest text-sm">Visualisoi skenaario</span>
+                    </>
+                  )}
                 </button>
               ) : (
-                <div className="w-full rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl">
+                <div className="w-full rounded-[3rem] overflow-hidden border border-white/10 shadow-3xl bg-slate-900">
                   <img src={image} alt="Vibe Visual" className="w-full h-auto" />
                 </div>
               )}
               
               <button 
                 onClick={() => {setStep('input'); setImage(null); setError(null);}}
-                className="text-slate-500 hover:text-white transition-colors uppercase text-[10px] font-black tracking-widest"
+                className="text-slate-500 hover:text-white transition-colors uppercase text-[10px] font-black tracking-[0.4em] py-4"
               >
                 <RefreshCw size={12} className="inline mr-2" /> Aloita alusta
               </button>
