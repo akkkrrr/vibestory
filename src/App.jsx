@@ -5,7 +5,7 @@ import {
   Clock, Scissors, Eye, Waves, Layers, Anchor, AlertCircle
 } from 'lucide-react';
 
-// API määritykset
+// API määritykset - MUISTA LISÄTÄ AVAIN TÄHÄN!
 const apiKey = "";
 const TEXT_MODEL = "gemini-2.5-flash-preview-09-2025";
 const IMAGE_MODEL = "imagen-4.0-generate-001";
@@ -121,8 +121,8 @@ const App = () => {
   const [story, setStory] = useState('');
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Tämä useEffect varmistaa, että Tailwind on ladattu (varmistus offline/väärin konfiguroiduille ympäristöille)
   useEffect(() => {
     if (!document.getElementById('tailwind-cdn')) {
       const script = document.createElement('script');
@@ -133,7 +133,13 @@ const App = () => {
   }, []);
 
   const generateStory = async () => {
+    if (!apiKey) {
+      setError("API-avain puuttuu koodista. Lisää se muuttujaan 'apiKey'.");
+      return;
+    }
+    
     setLoading(true);
+    setError(null);
     try {
       const systemPrompt = `Olet aistillisen kaunokirjallisuuden ammattilainen. Kirjoita upea, tyylikäs ja mukaansatempaava skenaario (200-300 sanaa). Käytä tunnelmallista kieltä, keskity fyysisiin tuntemuksiin ja jännitykseen. Tarinan tulee olla täysin linjassa annettujen parametrien kanssa. Kirjoita suomeksi.`;
 
@@ -150,18 +156,21 @@ const App = () => {
       });
 
       const data = await response.json();
+      if (data.error) {
+        throw new Error(data.error.message);
+      }
       setStory(data.candidates?.[0]?.content?.parts?.[0]?.text || "Tarinan luominen epäonnistui.");
       setStep('result');
     } catch (err) {
       console.error(err);
-      setStory("Virhe yhteydessä tekoälyyn.");
-      setStep('result');
+      setError("Virhe tarinan luonnissa: " + err.message);
     } finally {
       setLoading(false);
     }
   };
 
   const generateImage = async () => {
+    if (!apiKey) return;
     setLoading(true);
     try {
       const prompt = `Artistic, moody, high-end aesthetic scene: ${vibeData.location || 'luxurious interior'}, atmospheric lighting, cinematic, ${vibeData.mood}, hyper-realistic style, 8k.`;
@@ -204,8 +213,8 @@ const App = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#020205] text-slate-100 font-sans p-4 md:p-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-[#020205] text-slate-100 font-sans p-4 md:p-8 flex flex-col items-center justify-center">
+      <div className="w-full max-w-4xl mx-auto">
         <header className="text-center mb-12">
           <div className="inline-flex items-center justify-center p-4 bg-white/5 rounded-3xl mb-6 border border-white/10 shadow-2xl">
             <Sparkles className="text-pink-500" size={32} />
@@ -213,6 +222,13 @@ const App = () => {
           <h1 className="text-6xl font-black bg-gradient-to-r from-white via-pink-200 to-purple-400 bg-clip-text text-transparent mb-3 tracking-tighter italic">VIBE STORY</h1>
           <p className="text-slate-500 uppercase text-[10px] tracking-[0.6em] font-bold opacity-70">The Narrative Extension</p>
         </header>
+
+        {error && (
+          <div className="mb-8 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm flex items-center gap-3">
+            <AlertCircle size={18} />
+            {error}
+          </div>
+        )}
 
         {step === 'input' && (
           <div className="space-y-8 animate-in fade-in duration-700">
@@ -254,7 +270,6 @@ const App = () => {
         {step === 'result' && (
           <div className="space-y-10 animate-in slide-in-from-bottom-8 duration-1000">
             <div className="bg-slate-900/30 border border-white/10 rounded-[3rem] p-10 md:p-16 relative overflow-hidden backdrop-blur-2xl">
-              {/* Tagit ylhäällä */}
               <div className="flex flex-wrap gap-3 mb-12">
                 {Object.entries(vibeData).map(([key, val]) => (
                   val && val !== 'none' && key !== 'partnerName' && (
@@ -291,7 +306,7 @@ const App = () => {
               )}
               
               <button 
-                onClick={() => {setStep('input'); setImage(null);}}
+                onClick={() => {setStep('input'); setImage(null); setError(null);}}
                 className="flex items-center gap-3 text-slate-500 hover:text-white transition-colors py-4 uppercase text-[10px] font-black tracking-[0.4em]"
               >
                 <RefreshCw size={14} /> Tee uusi valinta
