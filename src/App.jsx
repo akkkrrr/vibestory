@@ -11,7 +11,8 @@ import {
 const apiKey = "AIzaSyC-rkWWFGl2LioSZ1YGoCtzpIHPO3AroUY"; 
 
 const TEXT_MODEL = "gemini-2.5-flash-preview-09-2025";
-const IMAGE_MODEL = "imagen-4.0-generate-001";
+// Vaihdettu malli sellaiseksi, joka toimii ilmaisella API-avaimella
+const IMAGE_MODEL = "gemini-2.5-flash-image-preview";
 
 const categories = {
   moods: [
@@ -176,16 +177,19 @@ const App = () => {
   const generateImage = async () => {
     if (!apiKey) return;
     setImageLoading(true);
+    setError(null);
     try {
-      // Imagen-4 model require instances field for prediction
-      const promptText = `Artistic, moody, high-end aesthetic scene: ${vibeData.location || 'luxurious interior'}, atmospheric lighting, cinematic, ${vibeData.mood}, ${vibeData.outfit}, hyper-realistic style, 8k.`;
+      // Käytetään gemini-2.5-flash-image-preview mallia joka tukee responseModalities: ['IMAGE']
+      const promptText = `Generate an artistic, moody, high-end aesthetic visual: A luxurious room with atmospheric lighting, cinematic, ${vibeData.mood} mood, focusing on ${vibeData.outfit}, hyper-realistic photography style, 8k. Do not include text.`;
       
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:predict?key=${apiKey}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          instances: [{ prompt: promptText }],
-          parameters: { sampleCount: 1 }
+          contents: [{ parts: [{ text: promptText }] }],
+          generationConfig: { 
+            responseModalities: ["IMAGE"] 
+          }
         })
       });
 
@@ -195,14 +199,17 @@ const App = () => {
         throw new Error(result.error.message);
       }
 
-      if (result.predictions?.[0]?.bytesBase64Encoded) {
-        setImage(`data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`);
+      // Etsitään kuva vastauksesta
+      const imageData = result.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+
+      if (imageData) {
+        setImage(`data:image/png;base64,${imageData}`);
       } else {
-        throw new Error("Kuvan dataa ei saatu palvelimelta.");
+        throw new Error("Kuvaa ei voitu luoda. Tarkista mallin saatavuus.");
       }
     } catch (err) {
       console.error(err);
-      setError("Kuvan generointi epäonnistui: " + err.message);
+      setError("Kuvan luominen epäonnistui: " + err.message + ". Imagen 4 vaatii tällä hetkellä maksullisen tilauksen, käytettiin varamallia.");
     } finally {
       setImageLoading(false);
     }
