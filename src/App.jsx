@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, Image as ImageIcon, BookOpen, Loader2, Zap, Target, 
   Box, RefreshCw, MapPin, Heart, Shield, MessageSquare, 
   Clock, Scissors, Eye, Waves, Layers, Anchor, AlertCircle
 } from 'lucide-react';
 
+// API määritykset
 const apiKey = "";
 const TEXT_MODEL = "gemini-2.5-flash-preview-09-2025";
 const IMAGE_MODEL = "imagen-4.0-generate-001";
@@ -121,25 +122,23 @@ const App = () => {
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Tämä useEffect varmistaa, että Tailwind on ladattu (varmistus offline/väärin konfiguroiduille ympäristöille)
+  useEffect(() => {
+    if (!document.getElementById('tailwind-cdn')) {
+      const script = document.createElement('script');
+      script.id = 'tailwind-cdn';
+      script.src = 'https://cdn.tailwindcss.com';
+      document.head.appendChild(script);
+    }
+  }, []);
+
   const generateStory = async () => {
     setLoading(true);
     try {
-      const systemPrompt = `Olet aistillisen kaunokirjallisuuden ammattilainen. Kirjoita upea, tyylikäs ja mukaansatempaava skenaario (200-300 sanaa). 
-      Käytä tunnelmallista kieltä, keskity fyysisiin tuntemuksiin ja jännitykseen. 
-      Tarinan tulee olla täysin linjassa annettujen parametrien kanssa. Kirjoita suomeksi.`;
+      const systemPrompt = `Olet aistillisen kaunokirjallisuuden ammattilainen. Kirjoita upea, tyylikäs ja mukaansatempaava skenaario (200-300 sanaa). Käytä tunnelmallista kieltä, keskity fyysisiin tuntemuksiin ja jännitykseen. Tarinan tulee olla täysin linjassa annettujen parametrien kanssa. Kirjoita suomeksi.`;
 
       const userPrompt = `Kirjoita tarina treffeistä kumppanin ${vibeData.partnerName} kanssa.
-      Tiedot:
-      - Tunnelma: ${vibeData.mood}
-      - Focus: ${vibeData.focus}
-      - Intensiteetti: ${vibeData.intensity}
-      - Puhetapa: ${vibeData.comm}
-      - Asu: ${vibeData.outfit} ja sukat: ${vibeData.nylon}
-      - Aistit & BDSM: ${vibeData.sensory}, ${vibeData.bdsm}
-      - Lelut: ${vibeData.toy}
-      - Erikoisfokus: ${vibeData.special}
-      - Turvallisuus: ${vibeData.safety}
-      - Sijainti: ${vibeData.location || 'Yksityinen tila'}`;
+      Parametrit: ${JSON.stringify(vibeData)}`;
 
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${TEXT_MODEL}:generateContent?key=${apiKey}`, {
         method: 'POST',
@@ -155,6 +154,8 @@ const App = () => {
       setStep('result');
     } catch (err) {
       console.error(err);
+      setStory("Virhe yhteydessä tekoälyyn.");
+      setStep('result');
     } finally {
       setLoading(false);
     }
@@ -163,7 +164,7 @@ const App = () => {
   const generateImage = async () => {
     setLoading(true);
     try {
-      const prompt = `A cinematic, aesthetic, high-end artistic scene: ${vibeData.location || 'luxurious bedroom'}, soft moody lighting, a couple in a ${vibeData.mood} and ${vibeData.intensity} moment, focus on ${vibeData.outfit}, hyper-realistic, 8k.`;
+      const prompt = `Artistic, moody, high-end aesthetic scene: ${vibeData.location || 'luxurious interior'}, atmospheric lighting, cinematic, ${vibeData.mood}, hyper-realistic style, 8k.`;
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:predict?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -184,17 +185,17 @@ const App = () => {
   };
 
   const SelectBox = ({ label, icon: Icon, value, options, field }) => (
-    <div className="space-y-1.5 group">
-      <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-1.5 ml-1 group-hover:text-pink-500/80 transition-colors">
-        <Icon size={10} /> {label}
+    <div className="flex flex-col space-y-2 group">
+      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2 ml-1 group-hover:text-pink-500 transition-colors">
+        <Icon size={12} /> {label}
       </label>
       <select 
-        className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-pink-500/50 transition-all cursor-pointer appearance-none hover:bg-white/10"
+        className="w-full bg-slate-900/50 border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-pink-500/50 hover:bg-white/5 transition-all cursor-pointer"
         value={value}
         onChange={(e) => setVibeData({...vibeData, [field]: e.target.value})}
       >
         {options.map(opt => (
-          <option key={opt.value} value={opt.label} className="bg-slate-900 text-sm text-white">
+          <option key={opt.value} value={opt.label} className="bg-slate-950 text-white">
             {opt.emoji} {opt.label}
           </option>
         ))}
@@ -203,75 +204,61 @@ const App = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#020205] text-slate-100 font-sans p-4 md:p-8 selection:bg-pink-500/40">
+    <div className="min-h-screen bg-[#020205] text-slate-100 font-sans p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
-        <header className="text-center mb-8">
-          <div className="inline-flex items-center justify-center p-3 bg-gradient-to-br from-pink-500/10 to-purple-500/10 rounded-2xl mb-4 border border-white/5 shadow-2xl shadow-pink-500/5">
+        <header className="text-center mb-12">
+          <div className="inline-flex items-center justify-center p-4 bg-white/5 rounded-3xl mb-6 border border-white/10 shadow-2xl">
             <Sparkles className="text-pink-500" size={32} />
           </div>
-          <h1 className="text-5xl md:text-6xl font-black bg-gradient-to-r from-white via-pink-100 to-purple-300 bg-clip-text text-transparent mb-2 tracking-tighter italic">VIBE STORY</h1>
-          <p className="text-slate-500 uppercase text-[10px] tracking-[0.5em] font-bold opacity-60">The Narrative Extension</p>
+          <h1 className="text-6xl font-black bg-gradient-to-r from-white via-pink-200 to-purple-400 bg-clip-text text-transparent mb-3 tracking-tighter italic">VIBE STORY</h1>
+          <p className="text-slate-500 uppercase text-[10px] tracking-[0.6em] font-bold opacity-70">The Narrative Extension</p>
         </header>
 
         {step === 'input' && (
-          <div className="space-y-6">
-            <div className="bg-slate-900/30 border border-white/5 rounded-[2.5rem] p-6 md:p-10 shadow-3xl backdrop-blur-xl">
-              <div className="mb-8">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Kenen kanssa jaat tämän hetken?</label>
+          <div className="space-y-8 animate-in fade-in duration-700">
+            <div className="bg-slate-900/20 border border-white/5 rounded-[3rem] p-8 md:p-12 backdrop-blur-3xl shadow-3xl">
+              <div className="mb-12">
+                <label className="text-[11px] font-black text-pink-500/80 uppercase tracking-[0.3em] mb-3 block">Kumppanin nimi</label>
                 <input 
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-xl font-bold mt-2 focus:ring-4 focus:ring-pink-500/10 border-pink-500/20 outline-none transition-all placeholder:text-slate-700 text-white"
-                  placeholder="Kumppanin nimi..."
+                  className="w-full bg-white/5 border-b-2 border-white/10 rounded-t-xl p-5 text-2xl font-bold focus:border-pink-500 outline-none transition-all placeholder:text-slate-800 text-white"
+                  placeholder="Kenen kanssa jaat tämän?..."
                   value={vibeData.partnerName}
                   onChange={(e) => setVibeData({...vibeData, partnerName: e.target.value})}
                 />
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 text-white">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <SelectBox label="Tunnelma" icon={Heart} value={vibeData.mood} options={categories.moods} field="mood" />
                 <SelectBox label="Fokus" icon={Target} value={vibeData.focus} options={categories.focus} field="focus" />
                 <SelectBox label="Intensiteetti" icon={Zap} value={vibeData.intensity} options={categories.intensity} field="intensity" />
                 <SelectBox label="Asu" icon={Scissors} value={vibeData.outfit} options={categories.outfits} field="outfit" />
-                <SelectBox label="Nylon" icon={Layers} value={vibeData.nylon} options={categories.nylon} field="nylon" />
+                <SelectBox label="Sukat" icon={Layers} value={vibeData.nylon} options={categories.nylon} field="nylon" />
                 <SelectBox label="Aistit" icon={Eye} value={vibeData.sensory} options={categories.sensory} field="sensory" />
                 <SelectBox label="BDSM" icon={Anchor} value={vibeData.bdsm} options={categories.bdsm} field="bdsm" />
                 <SelectBox label="Lelut" icon={Box} value={vibeData.toy} options={categories.toys} field="toy" />
-                <SelectBox label="Puhe" icon={MessageSquare} value={vibeData.comm} options={categories.communication} field="comm" />
                 <SelectBox label="Erikois" icon={Sparkles} value={vibeData.special} options={categories.special} field="special" />
-                <SelectBox label="Turva" icon={Shield} value={vibeData.safety} options={categories.safety} field="safety" />
-                <div className="space-y-1.5 group">
-                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 ml-1 group-hover:text-green-500/80 transition-colors">
-                    <MapPin size={10} /> Sijainti
-                  </label>
-                  <input 
-                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-green-500/50 transition-all hover:bg-white/10"
-                    placeholder="Esim. makuuhuone..."
-                    value={vibeData.location}
-                    onChange={(e) => setVibeData({...vibeData, location: e.target.value})}
-                  />
-                </div>
               </div>
 
               <button 
                 onClick={generateStory}
                 disabled={!vibeData.partnerName || loading}
-                className="w-full mt-10 bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-20 py-6 rounded-3xl font-black text-xl tracking-widest shadow-2xl shadow-pink-500/20 transition-all flex items-center justify-center gap-4 text-white"
+                className="w-full mt-12 bg-gradient-to-r from-pink-600 to-indigo-700 hover:opacity-90 disabled:opacity-20 py-6 rounded-2xl font-black text-xl tracking-widest shadow-2xl transition-all flex items-center justify-center gap-4 text-white"
               >
-                {loading ? <Loader2 className="animate-spin" /> : <Sparkles size={24} />}
-                KIRJOITA SKENAARIO
+                {loading ? <Loader2 className="animate-spin" /> : <BookOpen size={24} />}
+                LUO SKENAARIO
               </button>
             </div>
           </div>
         )}
 
         {step === 'result' && (
-          <div className="space-y-8">
-            <div className="bg-slate-900/40 border border-white/10 rounded-[3rem] p-8 md:p-12 relative overflow-hidden backdrop-blur-3xl shadow-3xl">
-              <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-pink-500 via-purple-500 to-indigo-600" />
-              
-              <div className="flex flex-wrap gap-2 mb-12 opacity-40 hover:opacity-100 transition-opacity">
+          <div className="space-y-10 animate-in slide-in-from-bottom-8 duration-1000">
+            <div className="bg-slate-900/30 border border-white/10 rounded-[3rem] p-10 md:p-16 relative overflow-hidden backdrop-blur-2xl">
+              {/* Tagit ylhäällä */}
+              <div className="flex flex-wrap gap-3 mb-12">
                 {Object.entries(vibeData).map(([key, val]) => (
-                  val && key !== 'partnerName' && key !== 'location' && (
-                    <span key={key} className="bg-white/5 px-3 py-1.5 rounded-full text-[9px] font-black border border-white/5 uppercase tracking-wider">
+                  val && val !== 'none' && key !== 'partnerName' && (
+                    <span key={key} className="bg-white/5 border border-white/10 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest text-pink-300/80">
                       {val}
                     </span>
                   )
@@ -280,36 +267,34 @@ const App = () => {
 
               <div className="prose prose-invert max-w-none">
                 {story.split('\n').filter(p => p.trim()).map((para, i) => (
-                  <p key={i} className="text-xl md:text-3xl leading-[1.7] text-slate-100 font-serif italic mb-10 first-letter:text-6xl first-letter:text-pink-500 first-letter:font-black first-letter:mr-3 first-letter:float-left">
+                  <p key={i} className="text-2xl md:text-3xl leading-[1.8] text-slate-200 font-serif italic mb-8 last:mb-0">
                     {para}
                   </p>
                 ))}
               </div>
             </div>
 
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6 items-center">
               {!image ? (
                 <button 
                   onClick={generateImage}
                   disabled={loading}
-                  className="bg-white/5 hover:bg-white/10 text-white p-8 rounded-[2.5rem] flex items-center justify-center gap-4 transition-all border border-white/10 group shadow-xl"
+                  className="w-full max-w-md bg-white/5 border border-white/10 hover:bg-white/10 p-8 rounded-3xl flex items-center justify-center gap-4 transition-all group"
                 >
-                  {loading ? <Loader2 className="animate-spin text-pink-500" /> : <ImageIcon size={32} className="text-pink-400 group-hover:rotate-6 transition-transform" />}
-                  <span className="text-xl font-black tracking-widest uppercase text-white">Visualisoi Hetki</span>
+                  {loading ? <Loader2 className="animate-spin text-pink-500" /> : <ImageIcon size={28} className="text-pink-500 group-hover:scale-125 transition-transform" />}
+                  <span className="font-black tracking-widest uppercase">Visualisoi skenaario</span>
                 </button>
               ) : (
-                <div className="rounded-[3rem] overflow-hidden border border-white/10 shadow-3xl group relative">
-                  <img src={image} alt="Vibe Illustration" className="w-full h-auto transition-transform duration-[5s] group-hover:scale-110" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
+                <div className="w-full rounded-[3rem] overflow-hidden border border-white/10 shadow-3xl bg-slate-900">
+                  <img src={image} alt="Vibe" className="w-full h-auto" />
                 </div>
               )}
               
               <button 
                 onClick={() => {setStep('input'); setImage(null);}}
-                className="flex items-center justify-center gap-3 text-slate-600 hover:text-pink-400 transition-all py-6 group"
+                className="flex items-center gap-3 text-slate-500 hover:text-white transition-colors py-4 uppercase text-[10px] font-black tracking-[0.4em]"
               >
-                <RefreshCw size={16} className="group-hover:rotate-180 transition-transform duration-700" />
-                <span className="text-xs font-black uppercase tracking-[0.3em]">Aloita uusi sopimus</span>
+                <RefreshCw size={14} /> Tee uusi valinta
               </button>
             </div>
           </div>
