@@ -124,6 +124,7 @@ const App = () => {
   const [story, setStory] = useState('');
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -174,25 +175,36 @@ const App = () => {
 
   const generateImage = async () => {
     if (!apiKey) return;
-    setLoading(true);
+    setImageLoading(true);
     try {
-      const prompt = `Artistic, moody, high-end aesthetic scene: ${vibeData.location || 'luxurious interior'}, atmospheric lighting, cinematic, ${vibeData.mood}, hyper-realistic style, 8k.`;
+      // Imagen-4 model require instances field for prediction
+      const promptText = `Artistic, moody, high-end aesthetic scene: ${vibeData.location || 'luxurious interior'}, atmospheric lighting, cinematic, ${vibeData.mood}, ${vibeData.outfit}, hyper-realistic style, 8k.`;
+      
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:predict?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          instances: { prompt: prompt },
+          instances: [{ prompt: promptText }],
           parameters: { sampleCount: 1 }
         })
       });
-      const data = await response.json();
-      if (data.predictions?.[0]?.bytesBase64Encoded) {
-        setImage(`data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`);
+
+      const result = await response.json();
+      
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+
+      if (result.predictions?.[0]?.bytesBase64Encoded) {
+        setImage(`data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`);
+      } else {
+        throw new Error("Kuvan dataa ei saatu palvelimelta.");
       }
     } catch (err) {
       console.error(err);
+      setError("Kuvan generointi epäonnistui: " + err.message);
     } finally {
-      setLoading(false);
+      setImageLoading(false);
     }
   };
 
@@ -298,15 +310,24 @@ const App = () => {
               {!image ? (
                 <button 
                   onClick={generateImage}
-                  disabled={loading}
+                  disabled={imageLoading}
                   className="w-full max-w-md bg-white/5 border border-white/10 hover:bg-white/10 p-8 rounded-3xl flex items-center justify-center gap-4 transition-all group"
                 >
-                  {loading ? <Loader2 className="animate-spin text-pink-500" /> : <ImageIcon size={28} className="text-pink-500 group-hover:scale-125 transition-transform" />}
-                  <span className="font-black tracking-widest uppercase">Visualisoi skenaario</span>
+                  {imageLoading ? (
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="animate-spin text-pink-500" />
+                      <span className="font-black tracking-widest uppercase animate-pulse">Luodaan visuaalia...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <ImageIcon size={28} className="text-pink-500 group-hover:scale-125 transition-transform" />
+                      <span className="font-black tracking-widest uppercase">Visualisoi skenaario</span>
+                    </>
+                  )}
                 </button>
               ) : (
-                <div className="w-full rounded-[3rem] overflow-hidden border border-white/10 shadow-3xl bg-slate-900">
-                  <img src={image} alt="Vibe" className="w-full h-auto" />
+                <div className="w-full rounded-[3rem] overflow-hidden border border-white/10 shadow-3xl bg-slate-900 animate-in zoom-in duration-500">
+                  <img src={image} alt="Vibe Visual" className="w-full h-auto" />
                 </div>
               )}
               
