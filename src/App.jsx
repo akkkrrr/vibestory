@@ -9,7 +9,6 @@ import {
 const apiKey = "AIzaSyC-rkWWFGl2LioSZ1YGoCtzpIHPO3AroUY"; 
 
 const TEXT_MODEL = "gemini-2.5-flash-preview-09-2025";
-const IMAGE_MODEL = "gemini-2.5-flash-preview-09-2025";
 
 const categories = {
   moods: [
@@ -167,6 +166,7 @@ const App = () => {
     setImageLoading(true);
     setError(null);
     try {
+      // Yritetään generoida kuva Gemini 2.5 Flashilla
       const promptText = `An aesthetic, high-end cinematic photography shot of a luxurious setting, ${vibeData.mood} mood, atmospheric lighting, ${vibeData.outfit}, hyper-realistic, 8k, bokeh. NO TEXT.`;
       
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`, {
@@ -180,21 +180,19 @@ const App = () => {
 
       const result = await response.json();
       
-      if (result.error) throw new Error(result.error.message);
-
+      // Tarkistetaan sisältääkö vastaus kuvan
       const imageData = result.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
 
       if (imageData) {
         setImage(`data:image/png;base64,${imageData}`);
       } else {
-        // Fallback-kuva jos generointi ei onnistu
-        setImage(`https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=1200`);
-        setError("Kuvagenerointi vaatii laskutustilin. Näytetään tunnelmakuva.");
+        throw new Error("API ei palauttanut kuvaa.");
       }
     } catch (err) {
-      console.error(err);
+      console.error("Kuvavirhe:", err);
+      // Fallback: Tyylikäs tunnelmakuva Unsplashista, jos generointi epäonnistuu (yleensä laskutusrajoitusten takia)
       setImage(`https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=1200`);
-      setError("Kuvapalvelu on rajoitettu. Näytetään tunnelmakuva.");
+      setError("Kuvagenerointi vaatii yleensä maksullisen API-käytön. Käytetään valmista tunnelmakuvaa.");
     } finally {
       setImageLoading(false);
     }
