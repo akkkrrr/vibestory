@@ -5,8 +5,11 @@ import {
   Clock, Scissors, Eye, Waves, Layers, Anchor, AlertCircle
 } from 'lucide-react';
 
-// API määritykset - MUISTA LISÄTÄ AVAIN TÄHÄN!
-const apiKey = "";
+// --- API-AVAIN ---
+// Hae avain täältä: https://aistudio.google.com/app/apikey
+// Liitä se lainausmerkkien sisään:
+const apiKey = "AIzaSyC-rkWWFGl2LioSZ1YGoCtzpIHPO3AroUY"; 
+
 const TEXT_MODEL = "gemini-2.5-flash-preview-09-2025";
 const IMAGE_MODEL = "imagen-4.0-generate-001";
 
@@ -133,8 +136,8 @@ const App = () => {
   }, []);
 
   const generateStory = async () => {
-    if (!apiKey) {
-      setError("API-avain puuttuu koodista. Lisää se muuttujaan 'apiKey'.");
+    if (!apiKey || apiKey === "") {
+      setError("API-avain puuttuu koodista! Hae se AI Studiosta ja lisää muuttujaan 'apiKey'.");
       return;
     }
     
@@ -224,9 +227,11 @@ const App = () => {
         </header>
 
         {error && (
-          <div className="mb-8 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm flex items-center gap-3">
-            <AlertCircle size={18} />
-            {error}
+          <div className="mb-8 p-6 bg-red-500/10 border border-red-500/30 rounded-3xl text-red-400 text-sm flex flex-col gap-2 text-center animate-pulse">
+            <div className="flex items-center justify-center gap-2 font-bold uppercase tracking-widest">
+              <AlertCircle size={20} /> HUOMIO
+            </div>
+            <p>{error}</p>
           </div>
         )}
 
